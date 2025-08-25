@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>チーム発表順ルーレット</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .roulette-container {
+            text-align: center;
+            color: white;
+        }
+        
+        .title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .roulette-wheel {
+            width: 400px;
+            height: 400px;
+            margin: 0 auto 2rem;
+            position: relative;
+            border-radius: 50%;
+            border: 12px solid #fff;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            transition: transform 3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            background: #fff;
+        }
+        
+        .wheel-segment {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            transform-origin: 200px 200px;
+            border: 2px solid rgba(255,255,255,0.3);
+            overflow: hidden;
+        }
+        
+        .wheel-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            letter-spacing: 1px;
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #333, #666);
+            border-radius: 50%;
+            border: 4px solid #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 5;
+        }
+        
+        .pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 30px solid #ff4757;
+            z-index: 10;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
+        }
+        
+        .spin-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+        
+        .spin-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+        
+        .spin-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 2rem;
+            font-size: 2rem;
+            font-weight: bold;
+            min-height: 3rem;
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 1rem 2rem;
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+            to { box-shadow: 0 0 30px rgba(255,255,255,0.6); }
+        }
+        
+        .selected-teams {
+            margin-top: 2rem;
+            text-align: left;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .selected-teams h3 {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .team-list {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        
+        .team-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .team-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const RouletteApp = () => {
+            const [teams] = useState(['チームA', 'チームB', 'チームC', 'チームD', 'チームE', 'チームF', 'チームG']);
+            const [availableTeams, setAvailableTeams] = useState(['チームA', 'チームB', 'チームC', 'チームD', 'チームE', 'チームF', 'チームG']);
+            const [selectedTeams, setSelectedTeams] = useState([]);
+            const [isSpinning, setIsSpinning] = useState(false);
+            const [result, setResult] = useState('');
+            const [rotation, setRotation] = useState(0);
+            
+            const colors = ['#FF6B6B', '#90EE90', '#F0E68C', '#DDA0DD', '#4169E1', '#FFB6C1', '#98FB98'];
+            
+            const spinWheel = () => {
+                // 前回選択されたチームがあれば、次のスピン時に削除
+                let currentAvailableTeams = [...availableTeams];
+                if (result) {
+                    const lastSelectedTeam = result.replace(' が選ばれました！', '');
+                    currentAvailableTeams = availableTeams.filter(team => team !== lastSelectedTeam);
+                    setAvailableTeams(currentAvailableTeams);
+                }
+                
+                if (currentAvailableTeams.length === 0) return;
+                
+                setIsSpinning(true);
+                setResult('');
+                
+                const randomTeamIndex = Math.floor(Math.random() * currentAvailableTeams.length);
+                const selectedTeam = currentAvailableTeams[randomTeamIndex];
+                
+                const spins = 5 + Math.random() * 5;
+                const segmentAngle = 360 / currentAvailableTeams.length;
+                
+                // ポインターは上部（0度の位置）にある
+                // セグメントはSVGで -90度から開始される（startAngle = angle * index - 90）
+                // 選択されたチーム（randomTeamIndex）のセグメント中心角度を計算
+                const segmentCenterAngle = -90 + (segmentAngle * randomTeamIndex) + (segmentAngle / 2);
+                
+                // そのセグメント中心をポインター位置（0度）に持ってくるための回転角度
+                const targetAngle = -segmentCenterAngle;
+                const finalAngle = targetAngle + (360 * spins);
+                
+                console.log(`選択チーム: ${selectedTeam} (index: ${randomTeamIndex})`);
+                console.log(`セグメント中心角度: ${segmentCenterAngle}度`);
+                console.log(`目標角度: ${targetAngle}度`);
+                console.log(`最終角度（回転込み）: ${finalAngle}度`);
+                
+                // 累積ではなく絶対角度で設定
+                setRotation(finalAngle);
+                
+                setTimeout(() => {
+                    setResult(`${selectedTeam} が選ばれました！`);
+                    setSelectedTeams(prev => [...prev, selectedTeam]);
+                    setIsSpinning(false);
+                }, 3000);
+            };
+            
+            const resetRoulette = () => {
+                setAvailableTeams(['チームA', 'チームB', 'チームC', 'チームD', 'チームE', 'チームF', 'チームG']);
+                setSelectedTeams([]);
+                setResult('');
+                setRotation(0);
+            };
+            
+            return (
+                <div className="roulette-container">
+                    <h1 className="title">チーム発表順ルーレット</h1>
+                    
+                    <div style={{ position: 'relative' }}>
+                        <div className="pointer"></div>
+                        <div className="roulette-wheel" style={{ transform: `rotate(${rotation}deg)` }}>
+                            <svg width="400" height="400" style={{ position: 'absolute', top: 0, left: 0 }}>
+                                {availableTeams.map((team, index) => {
+                                const angle = (360 / availableTeams.length);
+                                const startAngle = angle * index - 90;
+                                const endAngle = angle * (index + 1) - 90;
+                                const centerX = 200;
+                                const centerY = 200;
+                                const radius = 188;
+                                
+                                const x1 = centerX + radius * Math.cos((startAngle * Math.PI) / 180);
+                                const y1 = centerY + radius * Math.sin((startAngle * Math.PI) / 180);
+                                const x2 = centerX + radius * Math.cos((endAngle * Math.PI) / 180);
+                                const y2 = centerY + radius * Math.sin((endAngle * Math.PI) / 180);
+                                
+                                const largeArcFlag = angle > 180 ? 1 : 0;
+                                const pathData = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+                                
+                                const textAngle = (startAngle + endAngle) / 2;
+                                const textRadius = radius * 0.7;
+                                const textX = centerX + textRadius * Math.cos((textAngle * Math.PI) / 180);
+                                const textY = centerY + textRadius * Math.sin((textAngle * Math.PI) / 180);
+                                
+                                return (
+                                    <g key={team}>
+                                        <path
+                                            d={pathData}
+                                            fill={colors[teams.indexOf(team)]}
+                                            stroke="rgba(255,255,255,0.3)"
+                                            strokeWidth="2"
+                                        />
+                                        <text
+                                            x={textX}
+                                            y={textY}
+                                            textAnchor="middle"
+                                            dominantBaseline="middle"
+                                            fill="white"
+                                            fontSize="20"
+                                            fontWeight="bold"
+                                            style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)' }}
+                                        >
+                                            {team}
+                                        </text>
+                                    </g>
+                                );
+                            })}
+                            </svg>
+                            <div className="center-circle"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button 
+                            className="spin-button" 
+                            onClick={spinWheel} 
+                            disabled={isSpinning || availableTeams.length === 0}
+                        >
+                            {isSpinning ? '回転中...' : 'スピン！'}
+                        </button>
+                        <button className="spin-button" onClick={resetRoulette}>
+                            リセット
+                        </button>
+                    </div>
+                    
+                    <div className="result">{result}</div>
+                    
+                    {selectedTeams.length > 0 && (
+                        <div className="selected-teams">
+                            <h3>発表順</h3>
+                            <div className="team-list">
+                                {selectedTeams.map((team, index) => (
+                                    <div key={team} className="team-item">
+                                        <span>{index + 1}番目</span>
+                                        <span>{team}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        ReactDOM.render(<RouletteApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
